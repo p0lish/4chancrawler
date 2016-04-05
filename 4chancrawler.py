@@ -12,7 +12,7 @@ __author__ = "polish"
 
 ROOT_URL = "http://boards.4chan.org"
 IMG_URL = "http://i.4cdn.org"
-ROOT_DIR = "/home/p0/Pictures/DownloadedImages/"
+ROOT_DIR = "{CHANGE IT TO YOUR LOCAL DOWNLOAD FOLDER}"
 
 def ensure_dir(f):
     f += "/"
