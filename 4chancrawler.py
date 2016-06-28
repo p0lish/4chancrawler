@@ -57,7 +57,7 @@ def dirsfromurl(url):
     struct = url.split('/')
     filename = struct[-1]
     filetype = filename.split('.')[1]
-    subdir = filename.split('.')[0][0:5]
+    subdir = filename.split('.')[0][0:4]
 
     if (re.match(r"^[A-Za-z ]*$", filename) == None):
         struct.pop()
