@@ -3,16 +3,20 @@
 import urllib.error
 import urllib.request
 import os.path
+import random
 import re
 import sys
-from PIL import Image
 from bs4 import BeautifulSoup
 
 __author__ = "polish"
 
 ROOT_URL = "http://boards.4chan.org"
 IMG_URL = "http://i.4cdn.org"
-ROOT_DIR = "{CHANGE IT TO YOUR LOCAL DOWNLOAD FOLDER}"
+ROOT_DIR = "{REPLACE TO YOUR PATH}"
+USERAGENTS = [
+    "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36",
+    "Mozilla/5.0 (Windows; U; Windows NT 6.1; rv:2.2) Gecko/20110201"
+]
 
 def ensure_dir(f):
     f += "/"
@@ -22,9 +26,17 @@ def ensure_dir(f):
 
 
 # get contents from url #
+def randomUserAgent():
+    return random.choice(USERAGENTS)
+
+USERAGENT = randomUserAgent()
+
+
 def get_content(url):
     try:
-        return urllib.request.urlopen(url).read()
+        req = urllib.request.Request(url, headers={'User-Agent': USERAGENT})
+        content = urllib.request.urlopen(req).read()
+        return content
     except urllib.error.HTTPError as e:
         print("<--404-->", e)
         return False
@@ -32,42 +44,32 @@ def get_content(url):
 
 # save file from url #
 def save_file(url, filepath):
-    urllib.request.urlretrieve(url, filepath)
+    try:
+        urllib.request.urlretrieve(url, filepath)
+    except Exception as e:
+        print(e)
 
 
 # simple directory structure maker from url #
-def dirsfromurl(url,size):
-    width = size[0]
-    height = size[1]
-    whdir = str(width)+"x"+str(height)
+def dirsfromurl(url):
     url = url.replace("http://", "")
     url = url.replace("https://", "")
     struct = url.split('/')
     filename = struct[-1]
     filetype = filename.split('.')[1]
+    subdir = filename.split('.')[0][0:5]
+
     if (re.match(r"^[A-Za-z ]*$", filename) == None):
         struct.pop()
     fullpath = ''
     for pathname in struct:
         fullpath += pathname + "/"
     fullpath += filetype + "/"
-    fullpath += whdir + "/"
+    fullpath += subdir + "/"
     d = os.path.dirname(ROOT_DIR + fullpath)
     if not os.path.exists(d):
         os.makedirs(d)
     return fullpath + filename
-
-
-def getsizes(uri):
-    # get file size *and* image size (None if not known)
-    file = urllib.request.urlopen(uri)
-    try:
-        im = Image.open(file)
-        resolution = im.size
-    except:
-        resolution = (0,0)
-    return resolution
-
 
 
 def ready(thread, numofpages):
@@ -81,8 +83,10 @@ def ready(thread, numofpages):
         current_url = "/".join((ROOT_URL, thread, str_i))
         root_url = "/".join((ROOT_URL, thread, ""))
         # print(current_url)
-        soupContent = BeautifulSoup(get_content(current_url), 'html.parser')
+        content = get_content(current_url)
+        soupContent = BeautifulSoup(content, 'html.parser')
         links = soupContent.findAll('a', {"class": "replylink"})
+        links = list(set(links))
         for a in links:
             thread_url = root_url + a['href']
             cont = get_content(thread_url)
@@ -90,13 +94,12 @@ def ready(thread, numofpages):
                 threadContent = BeautifulSoup(cont, 'html.parser')
                 images = threadContent.findAll('a', {"class": "fileThumb"})
                 # print thread_url
+                images = list(set(images))
                 for img in images:
-                    images_url = "/".join((IMG_URL, thread))
                     image_source = "http:" + img['href']
-                    size = getsizes(image_source)
-                    img_path = ROOT_DIR + dirsfromurl(image_source, size)
+                    img_path = ROOT_DIR + dirsfromurl(image_source)
                     save_file(image_source, img_path)
-                    print("Image: " + image_source + " saved: " + img_path+" | size: "+ str(size))
+                    print("Image: " + image_source + " saved: " + img_path)
         i += 1
 
 
